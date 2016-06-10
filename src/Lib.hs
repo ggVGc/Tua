@@ -2,16 +2,10 @@
 
 module Lib where
 
+import Data.String
 
 
-data ArithExpr where
-  Lit :: Integer -> ArithExpr
-  Add :: ArithExpr -> ArithExpr -> ArithExpr
-  Mul :: ArithExpr -> ArithExpr -> ArithExpr
-  Sub :: ArithExpr -> ArithExpr -> ArithExpr
-  deriving (Show, Eq)
-
-instance Num ArithExpr where
+instance Num Expr where
   x + y         = Add x y
   x * y         = Mul x y
   x - y         = Sub x y
@@ -19,19 +13,40 @@ instance Num ArithExpr where
   signum x      = error "Not implemented"
   fromInteger = Lit
 
+data Expr where
+  Lit      :: Integer -> Expr
+  Add      :: Expr -> Expr -> Expr
+  Mul      :: Expr -> Expr -> Expr
+  Sub      :: Expr -> Expr -> Expr
+  Str      :: String -> Expr
+  LitFalse :: Expr
+  LitTrue  :: Expr
+  Equal    :: Expr -> Expr -> Expr
+  If       :: Expr -> Expr -> Expr -> Expr
+  Lam      :: String -> Expr -> Expr
+  App      :: Expr -> Expr -> Expr
+  Let      :: String -> Expr -> Expr -> Expr
+  Var      :: String -> Expr
+  Prim     :: Prim -> Expr
 
-data Expr a where
-  Num      :: ArithExpr -> Expr Integer
-  Str      :: String -> Expr String
-  LitFalse :: Expr Bool
-  LitTrue  :: Expr Bool
-  Equal    :: Expr Integer -> Expr Integer -> Expr Bool
-  If       :: Expr Bool -> Expr a -> Expr a -> Expr a
-  Lam      :: String -> Expr a -> Expr a
-  App      :: Expr a -> Expr a -> Expr a
-  Let      :: String -> Expr a -> Expr a -> Expr a
-  Var      :: String -> Expr a
-  Prim     :: Prim -> Expr a
+instance IsString Expr where
+    fromString = Var
+
+
+
+-- data Expr a where
+--   Num      :: ArithExpr -> Expr Integer
+--   Str      :: String -> Expr String
+--   LitFalse :: Expr Bool
+--   LitTrue  :: Expr Bool
+--   Equal    :: Expr Integer -> Expr Integer -> Expr Bool
+--   If       :: Expr Bool -> Expr a -> Expr a -> Expr a
+--   Lam      :: String -> Expr a -> Expr a
+--   App      :: Expr a -> Expr a -> Expr a
+--   Let      :: String -> Expr a -> Expr a -> Expr a
+--   Var      :: String -> Expr a
+--   Prim     :: Prim -> Expr a
+
 
 
 infixl 9 `App`
@@ -42,7 +57,8 @@ data Prim =
   | Member
 
 
-gen :: Expr a -> String
+-- gen :: Expr a -> String
+gen :: Expr -> String
 
 
 gen (App (Prim Member) arg)  = "recMember("++gen arg++")"
@@ -50,7 +66,6 @@ gen (App (Prim Insert) arg)  = "recInsert("++gen arg++")"
 gen (App (Prim EmptyRec) arg)  = "newRecord()"
 gen (App expr arg)  = gen expr++"("++gen arg++")"
 
-gen (Num ae) = genArith ae
 
 gen (Str s)    = s
 
@@ -62,18 +77,17 @@ gen (If p e1 e2)  = "if("++gen p++") then "++gen e1++" else "++gen e2++" end "
 gen (Equal a b)  = "("++gen a++") == ("++ gen b ++")"
 
 gen (Lam name expr) =
-  "function ("++name++")" ++gen expr++"end"
+  "function ("++name++") return " ++gen expr++"end"
 
 gen (Var name ) = name
 
 gen (Let name expr cont) =
   name++" = "++ gen expr++"\n"++gen cont
 
+gen (Lit x)   = show x
+gen (Add x y) = "("++(gen x ++ "+" ++gen y)++")"
+gen (Mul x y) = "("++(gen x ++ "*" ++gen y)++")"
+gen (Sub x y) = "("++(gen x ++ "-" ++gen y)++")"
 
-genArith :: ArithExpr -> String
-genArith (Lit x)   = show x
-genArith (Add x y) = "("++(genArith x ++ "+" ++genArith y)++")"
-genArith (Mul x y) = "("++(genArith x ++ "*" ++genArith y)++")"
-genArith (Sub x y) = "("++(genArith x ++ "-" ++genArith y)++")"
 
 
